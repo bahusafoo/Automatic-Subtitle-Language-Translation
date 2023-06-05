@@ -1,8 +1,8 @@
-﻿param ($InputFile,$OutputLanguage)
+﻿param ($InputFile,$OutputLanguage,$TimeOffSetInMilliSeconds)
 #####################################################################
 # Translate-SubtitlesFile.ps1
 # Author(s): Sean Huggans, Alexandru Marin
-$Script:Version = "23.6.5.1"
+$Script:Version = "23.6.5.3"
 #####################################################################
 
 ###################################
@@ -99,12 +99,32 @@ if (($OutputLanguage) -and ($OutputLanguage -ne $null) -and ($OutputLanguage -ne
                                     "00:00:00,000 --> 00:00:05,000" | Out-File -FilePath $OutPutPath -Append -Encoding utf8 -NoClobber -Force -ErrorAction Stop
                                     $SubtitleScriptCreditLine = "Translated to $($OutputLanguage) Automatically by Bahusafoo's Subtitle Translation Script version $($Script:Version)"
                                     $SubtitleScriptCreditLine | Out-File -FilePath $OutPutPath -Append -Encoding utf8 -NoClobber -Force -ErrorAction Stop
+                                    "(https://bahusa.net/Translate-SubtitlesFile)" | Out-File -FilePath $OutPutPath -Append -Encoding utf8 -NoClobber -Force -ErrorAction Stop
                                     $(Translate-Text -OutputLanguage $LanguageToTranslateTo -InputText $SubtitleScriptCreditLine) | Out-File -FilePath $OutPutPath -Append -Encoding utf8 -NoClobber -Force -ErrorAction Stop
                                     "" | Out-File -FilePath $OutPutPath -Append -Encoding utf8 -NoClobber -Force -ErrorAction Stop
                                     "2" | Out-File -FilePath $OutPutPath -Append -Encoding utf8 -NoClobber -Force -ErrorAction Stop
                                 } catch {
                                     Write-Host "Error 0"
                                 }
+                            }
+                        }
+                        if (($TimeOffSetInMilliSeconds -ne $null) -and ($TimeOffSetInMilliSeconds -ne "")) {
+                            Try {
+                                $LineSplit = $RawContentLine.Trim().Split(" --> ")
+                                $StartTimingRaw = $LineSplit[0]
+                                [datetime]$StartTimingTime = $StartTimingRaw.Split(",")[0]
+                                $StartTimingMS = $StartTimingRaw.Split(",")[1]
+                                $EndTimingRaw = $LineSplit[$LineSplit.Length -1].Trim()
+                                [datetime]$EndTimingTime = $EndTimingRaw.Split(",")[0]
+                                $EndTimingMS = $EndTimingRaw.Split(",")[1]
+                                $StartTimingProcessed = "$(Get-Date -Date $StartTimingTime.AddMilliseconds($TimeOffSetInMilliSeconds) -Format 'HH:mm:ss'),$($StartTimingMS)"
+                                $EndingTimingProcessed = "$(Get-Date -Date $EndTimingTime.AddMilliseconds($TimeOffSetInMilliSeconds) -Format 'HH:mm:ss'),$($EndTimingMS)"
+                                $TimingLineProcessed = "$($StartTimingProcessed) --> $($EndingTimingProcessed)"
+                                $OutputLine = $TimingLineProcessed
+                                #Write-Host "Timing Adjusted from $($RawContentLine.Trim()) to $($TimingLineProcessed)"
+                            } catch {
+                                $OutputLine = $RawContentLine
+                                Write-Host "Error With Time Offset, ignoring!"
                             }
                         }
                     } else {
