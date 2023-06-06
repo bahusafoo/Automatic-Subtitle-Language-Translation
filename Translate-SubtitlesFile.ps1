@@ -1,9 +1,12 @@
-﻿param ($InputFile,$OutputLanguage,$TimeOffSetInMilliSeconds)
+﻿param ($InputFile,$OutputLanguage,$TimeOffSetInMilliSeconds,$PerformAutoCorrections)
 #####################################################################
 # Translate-SubtitlesFile.ps1
 # Author(s): Sean Huggans, Alexandru Marin
-$Script:Version = "23.6.5.3"
+$Script:Version = "23.6.6.2"
 #####################################################################
+# EXAMPLE USAGE:
+# .\Translate-SubtitlesFile.ps1 -InputFile "C:\Temp\Harry Potter 6 - English.srt" -OutputLanguage "Nepali" -TimeOffSetInMilliSeconds "0" -PerformAutoCorrections $true
+#######################################################
 
 ###################################
 # Script Variables
@@ -48,12 +51,41 @@ Function Translate-Text ($InputText, $OutputLanguage) {
 ###################################
 # Script Execution Logic
 #############################
+$CorrectionsMapSource = "$($PSScriptRoot)\CorrectionsMap.txt"
 
 if (($OutputLanguage) -and ($OutputLanguage -ne $null) -and ($OutputLanguage -ne "")) {
     if (Test-Path -Path $InputFile) {
+        $CorrectedOutFileDir = $(Get-Item -Path $InputFile).DirectoryName
+        $CorrectedOutFileName = ""
+
+        # AutoCorrections based on items mapped in CorrectionsMap (default is enabled)
+        if ((Test-Path -Path $CorrectionsMapSource) -and ($PerformAutoCorrections -ne $false)) {
+            $CorrectedOutFileName = "$($(Get-Item -Path $InputFile).Name.Replace($(Get-Item -Path $InputFile).Extension,''))-corrected$($(Get-Item -Path $InputFile).Extension)"
+            Write-Host "Performing AutoCorrections..."
+            $CorrectedOutFileName = "$($(Get-Item -Path $InputFile).Name.Replace($(Get-Item -Path $InputFile).Extension,''))-corrected$($(Get-Item -Path $InputFile).Extension)"
+            if (Test-Path -Path "$($OutFileDir)\$($OutFileName)") {
+                Remove-Item -Path "$($OutFileDir)\$($OutFileName)" -Force -Confirm:$false
+            }
+            foreach ($InputLine in [array]$(Get-Content -Path $InputFile)) {
+                if ($InputLine.Trim() -ne "") {
+                    foreach ($Correction in [array]$(Get-Content -Path $CorrectionsMapSource)) {
+                        if ($Correction.Trim() -ne "") {
+                            $CorrectionPattern = $Correction.Split("|")[0]
+                            $CorrectedPattern = $Correction.Split("|")[1]
+                            $InputLine = $InputLine.replace($CorrectionPattern, $CorrectedPattern)
+                        }
+                    }
+                }
+                $InputLine | Out-File -FilePath "$($CorrectedOutFileDir)\$($CorrectedOutFileName)" -Append -Force
+            }
+        } else {
+            $CorrectedOutFileName = $(Get-Item -Path $InputFile).Name
+        }
+
         Try {
+            Write-Host "Performing Translations..."
             #Generate New file name based on the old
-            $InputObject = Get-Item -Path $InputFile
+            $InputObject = Get-Item -Path "$($CorrectedOutFileDir)\$($CorrectedOutFileName)"
             $OutPutPath = "$($InputObject.FullName.Replace($InputObject.Extension,''))-AUTOTRANSLATED-$($OutputLanguage)$($InputObject.Extension)"
             if (Test-Path -Path $OutPutPath) {
                 Remove-Item -Path $OutPutPath -Force -ErrorAction SilentlyContinue
