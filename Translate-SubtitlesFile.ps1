@@ -2,7 +2,7 @@
 #####################################################################
 # Translate-SubtitlesFile.ps1
 # Author(s): Sean Huggans, Alexandru Marin
-$Script:Version = "23.6.6.2"
+$Script:Version = "23.6.6.3"
 #####################################################################
 # EXAMPLE USAGE:
 # .\Translate-SubtitlesFile.ps1 -InputFile "C:\Temp\Harry Potter 6 - English.srt" -OutputLanguage "Nepali" -TimeOffSetInMilliSeconds "0" -PerformAutoCorrections $true
@@ -63,8 +63,8 @@ if (($OutputLanguage) -and ($OutputLanguage -ne $null) -and ($OutputLanguage -ne
             $CorrectedOutFileName = "$($(Get-Item -Path $InputFile).Name.Replace($(Get-Item -Path $InputFile).Extension,''))-corrected$($(Get-Item -Path $InputFile).Extension)"
             Write-Host "Performing AutoCorrections..."
             $CorrectedOutFileName = "$($(Get-Item -Path $InputFile).Name.Replace($(Get-Item -Path $InputFile).Extension,''))-corrected$($(Get-Item -Path $InputFile).Extension)"
-            if (Test-Path -Path "$($OutFileDir)\$($OutFileName)") {
-                Remove-Item -Path "$($OutFileDir)\$($OutFileName)" -Force -Confirm:$false
+            if (Test-Path -Path "$($CorrectedOutFileDir)\$($CorrectedOutFileName)") {
+                Remove-Item -Path "$($CorrectedOutFileDir)\$($CorrectedOutFileName)" -Force -Confirm:$false
             }
             foreach ($InputLine in [array]$(Get-Content -Path $InputFile)) {
                 if ($InputLine.Trim() -ne "") {
@@ -90,7 +90,7 @@ if (($OutputLanguage) -and ($OutputLanguage -ne $null) -and ($OutputLanguage -ne
             if (Test-Path -Path $OutPutPath) {
                 Remove-Item -Path $OutPutPath -Force -ErrorAction SilentlyContinue
             }
-            [array]$RawContentLines = Get-Content -Path $InputFile -ErrorAction SilentlyContinue
+            [array]$RawContentLines = Get-Content -Path $InputFile -ErrorAction Stop
             $CurrCount = 0
             $CurrPercentage = $([math]::Round($($CurrCount / $RawContentLines.Count * 100), 2))
             Write-Progress -Activity "Translating Subtitle File" -Status "Line $($CurrCount)/$($RawContentLines.count) ($($CurrPercentage)%)" -PercentComplete $CurrPercentage
@@ -116,7 +116,7 @@ if (($OutputLanguage) -and ($OutputLanguage -ne $null) -and ($OutputLanguage -ne
                             }
                         } else {
                             $LineType = "SubTitle"
-                            $OutputLine = Translate-Text -OutputLanguage $LanguageToTranslateTo -InputText $RawContentLine
+                            $OutputLine = Translate-Text -OutputLanguage $LanguageToTranslateTo -InputText $RawContentLine.Replace("#","%23")
                         }
                     } elseif ($RawContentLine.Trim() -like "*:*:*,* --> *:*:*,*") {
                         # Leave timing lines
@@ -132,7 +132,7 @@ if (($OutputLanguage) -and ($OutputLanguage -ne $null) -and ($OutputLanguage -ne
                                     $SubtitleScriptCreditLine = "Translated to $($OutputLanguage) Automatically by Bahusafoo's Subtitle Translation Script version $($Script:Version)"
                                     $SubtitleScriptCreditLine | Out-File -FilePath $OutPutPath -Append -Encoding utf8 -NoClobber -Force -ErrorAction Stop
                                     "(https://bahusa.net/Translate-SubtitlesFile)" | Out-File -FilePath $OutPutPath -Append -Encoding utf8 -NoClobber -Force -ErrorAction Stop
-                                    $(Translate-Text -OutputLanguage $LanguageToTranslateTo -InputText $SubtitleScriptCreditLine) | Out-File -FilePath $OutPutPath -Append -Encoding utf8 -NoClobber -Force -ErrorAction Stop
+                                    $(Translate-Text -OutputLanguage $LanguageToTranslateTo -InputText $SubtitleScriptCreditLine.Replace("#","%23")) | Out-File -FilePath $OutPutPath -Append -Encoding utf8 -NoClobber -Force -ErrorAction Stop
                                     "" | Out-File -FilePath $OutPutPath -Append -Encoding utf8 -NoClobber -Force -ErrorAction Stop
                                     "2" | Out-File -FilePath $OutPutPath -Append -Encoding utf8 -NoClobber -Force -ErrorAction Stop
                                 } catch {
@@ -167,7 +167,7 @@ if (($OutputLanguage) -and ($OutputLanguage -ne $null) -and ($OutputLanguage -ne
                             }
                             default {
                                 # Translate the rest
-                                $OutputLine = Translate-Text -OutputLanguage $LanguageToTranslateTo -InputText $RawContentLine
+                                $OutputLine = Translate-Text -OutputLanguage $LanguageToTranslateTo -InputText $RawContentLine.Replace("#","%23")
                                 #Write-Host $RawContentLine
                             }
                         }
