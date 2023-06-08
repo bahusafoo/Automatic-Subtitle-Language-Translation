@@ -2,7 +2,7 @@
 #####################################################################
 # Translate-SubtitlesFile.ps1
 # Author(s): Sean Huggans, Alexandru Marin
-$Script:Version = "23.6.6.3"
+$Script:Version = "23.6.6.4"
 #####################################################################
 # EXAMPLE USAGE:
 # .\Translate-SubtitlesFile.ps1 -InputFile "C:\Temp\Harry Potter 6 - English.srt" -OutputLanguage "Nepali" -TimeOffSetInMilliSeconds "0" -PerformAutoCorrections $true
@@ -73,6 +73,27 @@ if (($OutputLanguage) -and ($OutputLanguage -ne $null) -and ($OutputLanguage -ne
                             $CorrectionPattern = $Correction.Split("|")[0]
                             $CorrectedPattern = $Correction.Split("|")[1]
                             $InputLine = $InputLine.replace($CorrectionPattern, $CorrectedPattern)
+                        }
+                    }
+                    if ($InputLine.Trim() -like "*:*:*,* --> *:*:*,*") {
+                        if (($TimeOffSetInMilliSeconds -ne $null) -and ($TimeOffSetInMilliSeconds -ne "")) {
+                            Try {
+                                $LineSplit = $InputLine.Trim().Split(" --> ")
+                                $StartTimingRaw = $LineSplit[0]
+                                [datetime]$StartTimingTime = $StartTimingRaw.Split(",")[0]
+                                $StartTimingMS = $StartTimingRaw.Split(",")[1]
+                                $EndTimingRaw = $LineSplit[$LineSplit.Length -1].Trim()
+                                [datetime]$EndTimingTime = $EndTimingRaw.Split(",")[0]
+                                $EndTimingMS = $EndTimingRaw.Split(",")[1]
+                                $StartTimingProcessed = "$(Get-Date -Date $StartTimingTime.AddMilliseconds($TimeOffSetInMilliSeconds) -Format 'HH:mm:ss'),$($StartTimingMS)"
+                                $EndingTimingProcessed = "$(Get-Date -Date $EndTimingTime.AddMilliseconds($TimeOffSetInMilliSeconds) -Format 'HH:mm:ss'),$($EndTimingMS)"
+                                $TimingLineProcessed = "$($StartTimingProcessed) --> $($EndingTimingProcessed)"
+                                $InputLine = $TimingLineProcessed
+                                #Write-Host "Timing Adjusted from $($InputLine.Trim()) to $($TimingLineProcessed)"
+                            } catch {
+                                $InputLine = $InputLine
+                                Write-Host "Error With Time Offset, ignoring!"
+                            }
                         }
                     }
                 }
